@@ -1,0 +1,21 @@
+Endpoint to register a participant
+---
+consumes:
+  - application/json
+parameters:
+  - in: body
+    name: participant
+    description: The participant record to create.
+    schema:
+      type: object
+      required:
+        - email
+        - event_id
+      properties:
+        email:
+          type: string
+        event_id:
+          type: integer
+responses:
+  201:
+    description: Created

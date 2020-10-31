@@ -1,0 +1,19 @@
+Endpoint to return a list of event
+---
+definitions:
+  Event:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      location:
+        type: string
+      start_time:
+        type: timestamp
+      end_time:
+        type: timestamp
+responses:
+  200:
+    description: A list of event
