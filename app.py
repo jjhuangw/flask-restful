@@ -30,6 +30,23 @@ from dataclasses import field
 from flasgger import Swagger
 
 app = Flask(__name__)
+
+app.config['SWAGGER'] = {
+    "swagger_version": "2.0",
+    "title": "API",
+    "description": "demo",
+    "specs": [
+            {
+                "version": "1.0.0",
+                "title": "Event API",
+                "description": "include event management and sign up functions",
+                "endpoint": 'spec',
+                "route": '/spec',
+                "rule_filter": lambda rule: True
+            }
+    ]
+}
+
 swag = Swagger(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///event.db'
 db = SQLAlchemy(app)
@@ -97,7 +114,6 @@ def delete():
     Participant.query.filter_by(email=participant.email).filter_by(event_id=participant.event_id).delete()
     db.session.commit()
     return Response(status=204)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
