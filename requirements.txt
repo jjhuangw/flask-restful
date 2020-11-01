@@ -8,3 +8,4 @@ marshmallow-dataclass==8.1.0
 flasgger==0.5.4
 Flask-Mail==0.9.1
 Werkzeug~=0.16.0
+flake8

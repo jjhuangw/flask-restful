@@ -19,6 +19,8 @@ parameters:
 responses:
   201:
     description: Created
+  403:
+    description: Invalid input or deplicated record
   404:
     description: Resource is not existed
   500:

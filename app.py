@@ -22,11 +22,11 @@ deployment.
 import json
 
 from flasgger.utils import swag_from
-from marshmallow_dataclass import dataclass
 from flask import Flask, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
 
 from dataclasses import field
+from marshmallow_dataclass import dataclass
 from flasgger import Swagger
 from flask_mail import Mail, Message
 from threading import Thread
@@ -35,6 +35,9 @@ import configparser
 import traceback
 
 app = Flask(__name__)
+db = SQLAlchemy(app)
+log = logging.getLogger("demo")
+
 config = configparser.RawConfigParser()
 config.read('ConfigFile.properties')
 app.config['SWAGGER'] = {
@@ -52,11 +55,10 @@ app.config['SWAGGER'] = {
         }
     ]
 }
-swag = Swagger(app)
+Swagger(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///event.db'
-db = SQLAlchemy(app)
-log = logging.getLogger("demo")
+db.init_app(app)
 
 mail_settings = {
     "MAIL_SERVER": config.get('Email', 'mail.server'),
@@ -69,30 +71,6 @@ mail_settings = {
 
 app.config.update(mail_settings)
 mail = Mail(app)
-
-
-@dataclass
-class Event(db.Model):
-    id: int
-    name: str
-    location: str
-    start_time: str
-    end_time: str
-
-    id = db.Column(db.Integer, primary_key=True, auto_increment=True)
-    name = db.Column(db.Text)
-    location = db.Column(db.Text)
-    start_time = db.Column(db.Text)
-    end_time = db.Column(db.Text)
-
-
-@dataclass
-class Participant(db.Model):
-    email: str = field(metadata={"required": True})
-    event_id: int = field(metadata={"required": True})
-
-    email = db.Column(db.Text, primary_key=True)
-    event_id = db.Column(db.Integer, primary_key=True)
 
 
 @app.route('/events', methods=['GET'])
@@ -146,6 +124,10 @@ def post():
     if event is None:
         return Response(status=404)
 
+    record = Participant.query.filter_by(email=participant.email).filter_by(event_id=participant.event_id).first()
+    if record:
+        return {"msg": "duplicated record"}, 403
+
     try:
         db.session.add(participant)
         msg = Message(config.get('Email', 'mail.title'),
@@ -158,7 +140,6 @@ def post():
         log.error("Exception: %s" % traceback.format_exc())
         db.session.rollback()
     db.session.commit()
-
     return Response(status=201)
 
 
@@ -184,6 +165,32 @@ def handle_error(e):
     code = 500
     log.error("Exception: %s" % traceback.format_exc())
     return jsonify(error=str(e)), code
+
+
+@dataclass
+class Event(db.Model):
+    __tablename__ = "EVENT"
+    id: int
+    name: str
+    location: str
+    start_time: str
+    end_time: str
+
+    id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+    name = db.Column(db.Text)
+    location = db.Column(db.Text)
+    start_time = db.Column(db.Text)
+    end_time = db.Column(db.Text)
+
+
+@dataclass
+class Participant(db.Model):
+    __tablename__ = "PARTICIPANT"
+    email: str = field(metadata={"required": True})
+    event_id: int = field(metadata={"required": True})
+
+    email = db.Column(db.Text, primary_key=True)
+    event_id = db.Column(db.Integer, primary_key=True)
 
 
 if __name__ == '__main__':

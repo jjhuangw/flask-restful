@@ -8,3 +8,6 @@ parts
 src/*.egg-info
 lib
 lib64
+./.pytest_cache
+.idea/*
+__pycache__/
