@@ -3,12 +3,15 @@
 ## what is this?
 simple api example using flask. a flask api object contains one or more functionalities (GET, POST, etc). 
 
-API document http://localhost:5000/apidocs/index.html 
+API document http://localhost:5000/apidocs/index.html
 
 ## install
 
 ```
 pip3 install -r requirements.txt
+
+# Apply SMTP service, 
+# e.g. mailtrap (https://mailtrap.io/) or gmail
 ```
 
 ## run

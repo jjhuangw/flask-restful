@@ -1,0 +1,37 @@
+Endpoint to create an event
+---
+consumes:
+  - application/json
+parameters:
+  - in: path
+    name: event_id
+    type: integer
+    required: true
+    description: The ID of the event to delete.
+  - in: body
+    name: event
+    description: The event record to create.
+    schema:
+      type: object
+      required:
+        - name
+        - location
+        - start_time
+        - end_time
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+
+responses:
+  204:
+    description: Updated
+  404:
+    description: Resource is not existed
+  500:
+    description: Unexpected server error

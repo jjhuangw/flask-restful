@@ -1,0 +1,17 @@
+Endpoint to delete an event
+---
+consumes:
+  - application/json
+parameters:
+  - in: path
+    name: event_id
+    type: integer
+    required: true
+    description: The ID of the event to delete.
+responses:
+  204:
+    description: Deleted
+  404:
+    description: Resource is not existed
+  500:
+    description: Unexpected server error

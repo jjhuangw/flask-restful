@@ -28,34 +28,53 @@ from flask_sqlalchemy import SQLAlchemy
 
 from dataclasses import field
 from flasgger import Swagger
+from flask_mail import Mail, Message
+from threading import Thread
+import logging
+import configparser
+import traceback
 
 app = Flask(__name__)
-
+config = configparser.RawConfigParser()
+config.read('ConfigFile.properties')
 app.config['SWAGGER'] = {
     "swagger_version": "2.0",
     "title": "API",
     "description": "demo",
     "specs": [
-            {
-                "version": "1.0.0",
-                "title": "Event API",
-                "description": "include event management and sign up functions",
-                "endpoint": 'spec',
-                "route": '/spec',
-                "rule_filter": lambda rule: True
-            }
+        {
+            "version": "1.0.0",
+            "title": "Event API",
+            "description": "include event management and sign up functions",
+            "endpoint": 'spec',
+            "route": '/spec',
+            "rule_filter": lambda rule: True
+        }
     ]
 }
-
 swag = Swagger(app)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///event.db'
 db = SQLAlchemy(app)
+log = logging.getLogger("demo")
+
+mail_settings = {
+    "MAIL_SERVER": config.get('Email', 'mail.server'),
+    "MAIL_PORT": config.get('Email', 'mail.port'),
+    "MAIL_USE_TLS": True,
+    "MAIL_USE_SSL": False,
+    "MAIL_USERNAME": config.get('Email', 'mail.username'),
+    "MAIL_PASSWORD": config.get('Email', 'mail.password')
+}
+
+app.config.update(mail_settings)
+mail = Mail(app)
 
 
 @dataclass
 class Event(db.Model):
     id: int
-    name: int
+    name: str
     location: str
     start_time: str
     end_time: str
@@ -84,16 +103,37 @@ def query_event():
 
 
 @app.route('/events', methods=['POST'])
+@swag_from('api-doc/event/create.yml')
 def create_event():
     event = Event.Schema().loads(json.dumps(request.json))
+    event.id = None
     db.session.add(event)
     db.session.commit()
     return Response(status=201)
 
 
+@app.route('/events/<event_id>', methods=['PATCH'])
+@swag_from('api-doc/event/update.yml')
+def update_event(event_id):
+    event = Event.query.filter_by(id=event_id).first()
+    if event is None:
+        return Response(status=404)
+    revised = Event.Schema().loads(json.dumps(request.json))
+    event.name = revised.name
+    event.location = revised.location
+    event.start_time = revised.start_time
+    event.end_time = revised.end_time
+    db.session.commit()
+    return Response(status=204)
+
+
 @app.route('/events/<event_id>', methods=['DELETE'])
+@swag_from('api-doc/event/delete.yml')
 def remove_event(event_id):
-    Event.query.filter_by(event_id=event_id).delete()
+    event = Event.query.filter_by(id=event_id).first()
+    if event is None:
+        return Response(status=404)
+    db.session.delete(event)
     db.session.commit()
     return Response(status=204)
 
@@ -102,18 +142,49 @@ def remove_event(event_id):
 @swag_from('api-doc/register/create.yml')
 def post():
     participant = Participant.Schema().loads(json.dumps(request.json))
-    db.session.add(participant)
+    event = Event.query.filter_by(id=participant.event_id).first()
+    if event is None:
+        return Response(status=404)
+
+    try:
+        db.session.add(participant)
+        msg = Message(config.get('Email', 'mail.title'),
+                      sender=config.get('Email', 'mail.sender'),
+                      recipients=[participant.email])
+        msg.body = "You have been successfully registered " + event.name
+        thr = Thread(target=send_async_email, args=[msg])
+        thr.start()
+    except Exception:
+        log.error("Exception: %s" % traceback.format_exc())
+        db.session.rollback()
     db.session.commit()
+
     return Response(status=201)
+
+
+def send_async_email(msg):
+    with app.app_context():
+        mail.send(msg)
 
 
 @app.route('/register', methods=['DELETE'])
 @swag_from('api-doc/register/delete.yml')
 def delete():
     participant = Participant.Schema().loads(json.dumps(request.json))
-    Participant.query.filter_by(email=participant.email).filter_by(event_id=participant.event_id).delete()
+    record = Participant.query.filter_by(email=participant.email).filter_by(event_id=participant.event_id).first()
+    if record is None:
+        return Response(status=404)
+    db.session.delete(record)
     db.session.commit()
     return Response(status=204)
+
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    code = 500
+    log.error("Exception: %s" % traceback.format_exc())
+    return jsonify(error=str(e)), code
+
 
 if __name__ == '__main__':
     app.run(debug=True)

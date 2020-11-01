@@ -19,3 +19,7 @@ parameters:
 responses:
   201:
     description: Created
+  404:
+    description: Resource is not existed
+  500:
+    description: Unexpected server error

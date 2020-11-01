@@ -17,3 +17,5 @@ definitions:
 responses:
   200:
     description: A list of event
+  500:
+    description: Unexpected server error

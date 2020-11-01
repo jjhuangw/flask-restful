@@ -1,0 +1,30 @@
+Endpoint to create an event
+---
+consumes:
+  - application/json
+parameters:
+  - in: body
+    name: event
+    description: The event record to create.
+    schema:
+      type: object
+      required:
+        - name
+        - location
+        - start_time
+        - end_time
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+
+responses:
+  201:
+    description: Created
+  500:
+    description: Unexpected server error
