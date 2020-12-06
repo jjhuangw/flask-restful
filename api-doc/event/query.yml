@@ -1,4 +1,4 @@
-Endpoint to return a list of event
+Endpoint to return a list of event  12435
 ---
 definitions:
   Event:
@@ -17,5 +17,7 @@ definitions:
 responses:
   200:
     description: A list of event
+  400:
+    description: bad request
   500:
     description: Unexpected server error

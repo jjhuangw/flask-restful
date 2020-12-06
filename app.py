@@ -33,8 +33,9 @@ from threading import Thread
 import logging
 import configparser
 import traceback
+from sqlalchemy.sql import text
 
-app = Flask(__name__)
+app: Flask = Flask(__name__)
 db = SQLAlchemy(app)
 log = logging.getLogger("demo")
 
@@ -84,7 +85,29 @@ def query_event():
 @swag_from('api-doc/event/create.yml')
 def create_event():
     event = Event.Schema().loads(json.dumps(request.json))
+
+    # request.json = > object
+    # json.dumps(request.json) object = > json string
+    # Event.Schema().loads(json string) => Event object
+    event.name
+    event.start_time
+    event.end_time
+
     event.id = None
+
+    # sql_cmd = text("""select count(1) from event where name = :name""").params(name=event.name)
+    # query_data = db.engine.execute(sql_cmd)
+    # print(query_data)
+    #
+    # statement = text("""INSERT INTO event(name, start_time, end_time, location) VALUES(:name, :start_time, :end_time,
+    #     :location)""").params(name=event.name, start_time=event.start_time, end_time=event.end_time,
+    #                           location=event.location)
+    # db.engine.execute(statement)
+    exist = Event.query.filter_by(name=event.name).first()
+    if exist is not None:
+        raise Exception("Sorry, this is duplicated")
+        # return {"msg": "duplicated record"}, 403
+
     db.session.add(event)
     db.session.commit()
     return Response(status=201)
